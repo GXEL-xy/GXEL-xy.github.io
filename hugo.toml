@@ -1,4 +1,4 @@
-baseURL = "https://username.github.io/"   # TODO: 部署后改成你的实际域名(自定义域名则填 https://你的域名/)
+baseURL = "https://15829959675.github.io/"   # GitHub Pages 免费域名
 languageCode = "zh-cn"
 title = "我的个人网站"
 theme = "PaperMod"
