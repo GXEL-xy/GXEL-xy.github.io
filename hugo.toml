@@ -1,45 +1,40 @@
-baseURL = "https://15829959675.github.io/"   # GitHub Pages 免费域名
-languageCode = "zh-cn"
+baseURL = "https://15829959675.github.io/"
+locale = "zh-cn"
 title = "我的个人网站"
-theme = "PaperMod"
-enableRobotsTXT = true
+theme = "stack"
 paginate = 10
 
+# 搜索页(search.md)自带 JSON 输出,首页无需 JSON
+[outputs]
+  home = ["HTML", "RSS"]
+
 [params]
-  env = "production"
-  description = "个人博客与作品集"
-  keywords = ["Blog", "Portfolio", "Hugo", "PaperMod"]
-  defaultTheme = "auto"           # light / dark / auto
-  disableThemeToggle = false
-  ShowReadingTime = true
-  ShowShareButtons = false
-  ShowPostNavLinks = true
-  ShowBreadCrumbs = true
-  ShowCodeCopyButtons = true
-  ShowWordCount = true
-  ShowRssButtonInSectionTermList = true
-  ShowToc = true
-  ShowFullTextinRSS = false
+  mainSections = ["posts"]
+  rssFullContent = true
 
-  [params.homeInfoParams]
-    Title = "你好，我是..."
-    Content = "这里是简介：研究方向 / 职业 / 一句话介绍。写作记录技术探索与思考。"
+  [params.sidebar]
+    compact = false
+    avatar = ""                 # 头像图片路径(本地或 URL),留空则不显示头像
+    subtitle = "记录技术探索与思考"
 
-  [params.profileMode]
+  [params.colorScheme]
+    toggle = true
+    default = "auto"            # auto / light / dark
+
+  [params.widgets]
+    homepage = [
+      { type = "search" },
+      { type = "categories" },
+      { type = "tag-cloud" }
+    ]
+    page = []
+
+  [params.footer]
+    since = 2026
+    customText = ""
+
+  [params.comments]
     enabled = false
-
-  [params.assets]
-    disableHLJS = false
-
-  [params.socialIcons]
-    # 取消注释并按需填写，即可在页脚显示社交图标
-    # - name = "github"
-    #   url = "https://github.com/yourname"
-    # - name = "email"
-    #   url = "mailto:you@example.com"
-
-  [params.analytics]
-    # 可选：接入统计后填写，如 goatcounter / plausible / umami
 
 [menu]
   [[menu.main]]
