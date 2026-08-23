@@ -1,0 +1,64 @@
+baseURL = "https://username.github.io/"   # TODO: 部署后改成你的实际域名(自定义域名则填 https://你的域名/)
+languageCode = "zh-cn"
+title = "我的个人网站"
+theme = "PaperMod"
+enableRobotsTXT = true
+paginate = 10
+
+[params]
+  env = "production"
+  description = "个人博客与作品集"
+  keywords = ["Blog", "Portfolio", "Hugo", "PaperMod"]
+  defaultTheme = "auto"           # light / dark / auto
+  disableThemeToggle = false
+  ShowReadingTime = true
+  ShowShareButtons = false
+  ShowPostNavLinks = true
+  ShowBreadCrumbs = true
+  ShowCodeCopyButtons = true
+  ShowWordCount = true
+  ShowRssButtonInSectionTermList = true
+  ShowToc = true
+  ShowFullTextinRSS = false
+
+  [params.homeInfoParams]
+    Title = "你好，我是..."
+    Content = "这里是简介：研究方向 / 职业 / 一句话介绍。写作记录技术探索与思考。"
+
+  [params.profileMode]
+    enabled = false
+
+  [params.assets]
+    disableHLJS = false
+
+  [params.socialIcons]
+    # 取消注释并按需填写，即可在页脚显示社交图标
+    # - name = "github"
+    #   url = "https://github.com/yourname"
+    # - name = "email"
+    #   url = "mailto:you@example.com"
+
+  [params.analytics]
+    # 可选：接入统计后填写，如 goatcounter / plausible / umami
+
+[menu]
+  [[menu.main]]
+    identifier = "home"
+    name = "首页"
+    url = "/"
+    weight = 1
+  [[menu.main]]
+    identifier = "posts"
+    name = "文章"
+    url = "/posts/"
+    weight = 2
+  [[menu.main]]
+    identifier = "about"
+    name = "关于"
+    url = "/about/"
+    weight = 3
+  [[menu.main]]
+    identifier = "tags"
+    name = "标签"
+    url = "/tags/"
+    weight = 4
