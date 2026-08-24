@@ -51,8 +51,8 @@ paginate = 10
       loading = "lazy"
 
   [params.goatcounter]
-    enabled = false                  # 注册 GoatCounter 后改为 true 并填 code
-    code = ""                        # 例如注册的站点代码 gxel
+    enabled = true                   # GoatCounter 访问统计已激活
+    code = "gxel"                    # https://gxel.goatcounter.com
 
 # ========== 中文(默认语言) ==========
 [languages.zh-cn]
