@@ -2,3 +2,24 @@
 {{- $code := .Site.Params.goatcounter.code -}}
 <script data-goatcounter="https://{{ $code }}.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 {{- end -}}
+
+{{- /* 侧边栏头像按天轮换(方案 A) */ -}}
+<script>
+(function () {
+    var avatarList = [
+        '/images/avatar.png',
+        '/images/avatar1.png',
+        '/images/avataaars.png',
+        '/images/avataaars1.png',
+        '/images/peeps-avatar-alpha.png'
+    ];
+    document.addEventListener('DOMContentLoaded', function () {
+        var img = document.querySelector('.site-avatar img');
+        if (!img) return;
+        var now = new Date();
+        var start = new Date(now.getFullYear(), 0, 0);
+        var dayOfYear = Math.floor((now - start) / 86400000);
+        img.src = avatarList[dayOfYear % avatarList.length];
+    });
+})();
+</script>
