@@ -1,0 +1,4 @@
+{{- if .Site.Params.goatcounter.enabled -}}
+{{- $code := .Site.Params.goatcounter.code -}}
+<script data-goatcounter="https://{{ $code }}.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+{{- end -}}

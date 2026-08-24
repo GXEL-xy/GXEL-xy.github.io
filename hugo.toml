@@ -34,7 +34,27 @@ paginate = 10
     customText = ""
 
   [params.comments]
-    enabled = false
+    enabled = true
+    provider = "giscus"
+
+    [params.comments.giscus]
+      repo = "GXEL-xy/GXEL-xy.github.io"
+      repoID = "R_kgDOUBr4Wg"
+      category = "Announcements"
+      categoryID = "DIC_kwDOUBr4Ws4DEDo6"
+      mapping = "pathname"          # 每篇文章按 URL 对应一个讨论帖
+      lightTheme = "light"
+      darkTheme = "dark_dimmed"
+      reactionsEnabled = 1
+      emitMetadata = 0
+      inputPosition = "top"
+      lang = "zh-CN"
+      strict = 0
+      loading = "lazy"
+
+  [params.goatcounter]
+    enabled = false                  # 注册 GoatCounter 后改为 true 并填 code
+    code = ""                        # 例如注册的站点代码 gxel
 
 [menu]
   [[menu.main]]
