@@ -1,6 +1,5 @@
 baseURL = "https://GXEL-xy.github.io/"
-locale = "zh-cn"
-title = "GXEL的个人网站"
+defaultContentLanguage = "zh-cn"
 theme = "stack"
 paginate = 10
 
@@ -15,7 +14,6 @@ paginate = 10
   [params.sidebar]
     compact = false
     avatar = "/images/avatar.png"                # 头像图片路径(本地或 URL),留空则不显示头像
-    subtitle = "记录技术探索与思考"
 
   [params.colorScheme]
     toggle = true
@@ -56,24 +54,68 @@ paginate = 10
     enabled = false                  # 注册 GoatCounter 后改为 true 并填 code
     code = ""                        # 例如注册的站点代码 gxel
 
-[menu]
-  [[menu.main]]
-    identifier = "home"
-    name = "首页"
-    url = "/"
-    weight = 1
-  [[menu.main]]
-    identifier = "posts"
-    name = "文章"
-    url = "/posts/"
-    weight = 2
-  [[menu.main]]
-    identifier = "about"
-    name = "关于"
-    url = "/about/"
-    weight = 3
-  [[menu.main]]
-    identifier = "tags"
-    name = "标签"
-    url = "/tags/"
-    weight = 4
+# ========== 中文(默认语言) ==========
+[languages.zh-cn]
+  locale = "zh-cn"
+  languageName = "简体中文"
+  title = "GXEL的个人网站"
+  weight = 1
+  contentDir = "content"
+
+  [languages.zh-cn.params.sidebar]
+    subtitle = "记录技术探索与思考"
+
+  [languages.zh-cn.menu]
+    [[languages.zh-cn.menu.main]]
+      identifier = "home"
+      name = "首页"
+      url = "/"
+      weight = 1
+    [[languages.zh-cn.menu.main]]
+      identifier = "posts"
+      name = "文章"
+      url = "/posts/"
+      weight = 2
+    [[languages.zh-cn.menu.main]]
+      identifier = "about"
+      name = "关于"
+      url = "/about/"
+      weight = 3
+    [[languages.zh-cn.menu.main]]
+      identifier = "tags"
+      name = "标签"
+      url = "/tags/"
+      weight = 4
+
+# ========== 英文 ==========
+[languages.en]
+  locale = "en"
+  languageName = "English"
+  title = "GXEL's Website"
+  weight = 2
+  contentDir = "content-en"
+
+  [languages.en.params.sidebar]
+    subtitle = "Documenting tech exploration & thinking"
+
+  [languages.en.menu]
+    [[languages.en.menu.main]]
+      identifier = "home"
+      name = "Home"
+      url = "/"
+      weight = 1
+    [[languages.en.menu.main]]
+      identifier = "posts"
+      name = "Posts"
+      url = "/posts/"
+      weight = 2
+    [[languages.en.menu.main]]
+      identifier = "about"
+      name = "About"
+      url = "/about/"
+      weight = 3
+    [[languages.en.menu.main]]
+      identifier = "tags"
+      name = "Tags"
+      url = "/tags/"
+      weight = 4
