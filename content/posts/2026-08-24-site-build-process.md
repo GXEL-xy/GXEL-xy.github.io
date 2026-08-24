@@ -169,6 +169,3 @@ defaultContentLanguage = "zh-cn"
 - **技术栈**:Hugo 0.165 extended + Stack 主题 + GitHub Actions + GitHub Pages
 - **本地**:`D:\blog`,日常写作 `写 md → hugo server 预览 → git push → 自动发布`
 
----
-
-*本记录与《网站操作手册》均保存在本地 `.workbuddy/` 目录,不入库不推送。*
