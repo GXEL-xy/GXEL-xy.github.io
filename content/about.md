@@ -7,14 +7,17 @@ description: "个人介绍"
 
 ## 我是谁
 
-这里填写你的个人介绍：姓名、职业/身份、所在城市。
+- **姓名**：郭家骏
+- **职业**：硕士研究生
+- **所在城市**：西安
 
 ## 研究方向 / 兴趣
 
-- 技术方向一
-- 技术方向二
+- 神经感知
+- 云原生（Docker / Kubernetes）
+- Linux
 
 ## 联系方式
 
-- GitHub: [github.com/yourname](https://github.com/yourname)
-- 邮箱: you@example.com
+- GitHub: [github.com/GXEL-xy](https://github.com/GXEL-xy)
+- 邮箱: [2956446350@qq.com](mailto:2956446350@qq.com)
