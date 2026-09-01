@@ -4,6 +4,7 @@ date: 2026-08-26T22:46:29+08:00
 draft: false
 description: "在三节点集群上完成 Dockerfile→镜像构建推送→配置管理→MySQL 有状态应用→WordPress 无状态应用→Ingress 网络暴露→验证排障的完整 K8s 部署链路。"
 tags: ["k8s基础项目"]
+categories: [项目]
 ---
 
 > **目标**：在三节点集群上完成「Dockerfile → 镜像构建推送 → 配置管理 → 有状态应用(MySQL) → 无状态应用(WordPress) → 网络暴露(Ingress) → 验证排障」完整链路。

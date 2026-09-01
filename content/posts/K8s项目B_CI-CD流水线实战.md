@@ -4,6 +4,7 @@ date: 2026-09-01T13:43:35+08:00
 draft: false
 description: "在三节点 K8s 集群上部署 Jenkins Master + 动态 Agent + 自建私有镜像仓库，用 Kaniko 实现代码提交→自动构建→推送→自动部署→访问验证的 CI/CD 全自动链路。"
 tags: ["k8s CI/CD"]
+categories: [项目]
 ---
 
 > 📦 **项目文件包**：[下载 K8s项目B_CI-CD流水线.zip](/files/K8s项目B_CI-CD流水线.zip)（含全部 YAML、damo-app 源码、Jenkinsfile、部署脚本，可直接拷到集群 master 使用）。本文件是详细操作手册，两者配合。
