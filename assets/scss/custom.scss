@@ -1,0 +1,153 @@
+/* ============================================================
+   GXEL 博客 · P0 快赢美化（2026-09-01 应用）
+   机制: Stack 主题 style.scss 最后一行 @import "custom.scss"，
+        本文件在主题之后加载，可安全覆盖；删除本文件即回滚。
+   方向: Linear 工程冷峻风（对齐 mockup-2 token）
+   ============================================================ */
+
+/* ---------- 1. 色板：hairline 线条层次取代重投影 ---------- */
+:root {
+    --body-background: #fcfcfd;
+    --accent-color: #5e6ad2;
+    --accent-color-darker: #4a54bd;
+    --accent-color-text: #ffffff;
+
+    /* 正文 #707070(≈5:1) → #3d4046(≈9:1) */
+    --body-text-color: #3d4046;
+
+    --card-background: #ffffff;
+    --card-background-selected: #f4f4f6;
+    --card-text-color-main: #1c1d21;
+    --card-text-color-secondary: #6b6f76;
+    --card-text-color-tertiary: #9a9fa5;
+    --card-separator-color: #e9e9eb;
+
+    --card-border-radius: 12px;
+    --card-padding: 24px;
+    --tag-border-radius: 6px;
+    --section-separation: 48px;
+
+    /* 线条而非投影：1px 描边 + 极轻环境光 */
+    --shadow-l1: 0 0 0 1px #ececee, 0 1px 2px rgba(16, 17, 20, 0.04);
+    --shadow-l2: 0 0 0 1px #e2e3e8, 0 6px 20px rgba(16, 17, 20, 0.07);
+
+    /* 链接"荧光笔"机制保留，改淡 accent 色 */
+    --link-background-color: 94, 106, 210;
+    --link-background-opacity: 0.10;
+    --link-background-opacity-hover: 0.16;
+
+    /* 行内代码：灰底灰字(≈3.4:1) → 淡 accent 底 + 深靛字(≈7:1) */
+    --code-background-color: rgba(94, 106, 210, 0.07);
+    --code-text-color: #46509e;
+
+    --blockquote-background-color: #f6f6f8;
+    --table-border-color: #e9e9eb;
+    --tr-even-background-color: #fafafb;
+
+    /* 统一 motion token */
+    --ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+    --dur-fast: 120ms;
+    --dur: 200ms;
+}
+
+/* 暗色模式：靠 hairline 分层，不再依赖阴影 */
+:root[data-scheme="dark"] {
+    --body-background: #16171b;
+    --accent-color: #7b86e0;
+    --accent-color-darker: #9aa3ea;
+    --accent-color-text: #101116;
+
+    --body-text-color: #b8bbc2;
+
+    --card-background: #1e1f25;
+    --card-background-selected: rgba(255, 255, 255, 0.06);
+    --card-text-color-main: #ececee;
+    --card-text-color-secondary: #a0a4ad;
+    --card-text-color-tertiary: #7c8087;
+    --card-separator-color: rgba(255, 255, 255, 0.08);
+
+    --shadow-l1: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-l2: 0 0 0 1px rgba(255, 255, 255, 0.10), 0 6px 20px rgba(0, 0, 0, 0.4);
+
+    --link-background-color: 123, 134, 224;
+    --link-background-opacity: 0.14;
+    --link-background-opacity-hover: 0.22;
+
+    --code-background-color: rgba(123, 134, 224, 0.14);
+    --code-text-color: #b3baf0;
+
+    --blockquote-background-color: rgba(255, 255, 255, 0.04);
+    --table-border-color: rgba(255, 255, 255, 0.10);
+    --tr-even-background-color: rgba(255, 255, 255, 0.03);
+}
+
+/* ---------- 2. 字体：拉丁/中文/等宽三线配对 ---------- */
+:root {
+    --sys-font-family: "IBM Plex Sans", -apple-system, "Segoe UI",
+        "MiSans", "HarmonyOS Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+    --base-font-family: var(--sys-font-family);
+    --code-font-family: "IBM Plex Mono", "Cascadia Code", "SF Mono", Consolas, monospace;
+
+    /* 正文 16-17px → 17px，行高 1.85 → 1.9 */
+    --article-font-size: 1.7rem;
+    --article-line-height: 1.9;
+}
+
+/* 正文列宽锁定（选择器已按站点 DOM 核实） */
+article.main-article .content {
+    max-width: 720px;
+    margin-inline: auto;
+}
+
+/* ---------- 3. 交互：卡片 hover（现状仅阴影微变） ---------- */
+.article-list article {
+    transition: box-shadow var(--dur) var(--ease),
+                transform var(--dur) var(--ease);
+}
+.article-list article:hover {
+    box-shadow: var(--shadow-l2);
+    transform: translateY(-2px);
+}
+
+/* ---------- 4. 动效：列表 stagger 入场 ---------- */
+.article-list article {
+    animation: card-in 0.4s var(--ease) backwards;
+}
+.article-list article:nth-child(1) { animation-delay: 0ms; }
+.article-list article:nth-child(2) { animation-delay: 50ms; }
+.article-list article:nth-child(3) { animation-delay: 100ms; }
+.article-list article:nth-child(4) { animation-delay: 150ms; }
+.article-list article:nth-child(5) { animation-delay: 200ms; }
+.article-list article:nth-child(6) { animation-delay: 250ms; }
+.article-list article:nth-child(7) { animation-delay: 300ms; }
+.article-list article:nth-child(8) { animation-delay: 350ms; }
+.article-list article:nth-child(9) { animation-delay: 400ms; }
+.article-list article:nth-child(10) { animation-delay: 450ms; }
+
+@keyframes card-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .article-list article {
+        animation: none;
+        transition: none;
+    }
+    .article-list article:hover { transform: none; }
+}
+
+/* ---------- 5. 移动端：首屏让位给正文 ---------- */
+@media (max-width: 767px) {
+    /* 头像 100px → 64px；注意该变量定义在 .left-sidebar 上（非 :root），
+       必须同名选择器覆盖才能生效 */
+    .left-sidebar {
+        --sidebar-avatar-size: 64px;
+    }
+
+    /* 标签触控目标放大 */
+    .tagCloud-tags a,
+    article .article-tags a {
+        padding: 6px 12px;
+    }
+}
