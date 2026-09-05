@@ -1,0 +1,56 @@
+{{- /* 人生谏言 widget：一言 API + 当天缓存 + 点击换句 + 离线降级 */ -}}
+{{- $p := merge (dict "title" "人生谏言" "default" "但行好事，莫问前程。" "defaultFrom" "《增广贤文》") .Params -}}
+<section class="widget widget-quote" id="quote-widget" title="点击换一句">
+    <div class="widget-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M9.6 5C6 5 3.2 7.9 3.2 11.5c0 3.4 2.6 6.1 5.9 6.1.5 0 .9-.1 1.2-.2-.8 1.4-2.1 2.4-3.7 2.9l.8 1.7c3.9-1.2 6.6-4.9 6.6-9.2C14 8 12.2 5 9.6 5Zm10 0C16 5 13.2 7.9 13.2 11.5c0 3.4 2.6 6.1 5.9 6.1.4 0 .8-.1 1.2-.2-.8 1.4-2.1 2.4-3.7 2.9l.8 1.7c3.9-1.2 6.6-4.9 6.6-9.2C24 8 22.2 5 19.6 5Z"/></svg>
+    </div>
+    <h2 class="widget-title section-title">{{ $p.title }}</h2>
+
+    <div class="widget-quote-body">
+        <p class="quote-text">{{ $p.default }}</p>
+        <footer class="quote-meta">—— {{ $p.defaultFrom }}</footer>
+    </div>
+
+    <script>
+    (function () {
+        var el = document.getElementById('quote-widget');
+        if (!el) return;
+        var textEl = el.querySelector('.quote-text');
+        var metaEl = el.querySelector('.quote-meta');
+        var KEY = 'hitokoto-of-day';
+        var loading = false;
+
+        function apply(d) {
+            if (!d || !d.hitokoto) return;
+            textEl.textContent = d.hitokoto;
+            var who = (d.from_who || '').trim();
+            var from = (d.from || '').trim();
+            var src = [who, from].filter(Boolean).join(' · ');
+            metaEl.textContent = '—— ' + (src || '佚名');
+        }
+
+        function load(force) {
+            if (loading) return;
+            if (!force) {
+                try {
+                    var cached = JSON.parse(sessionStorage.getItem(KEY) || 'null');
+                    if (cached && cached.date === new Date().toDateString()) { apply(cached); return; }
+                } catch (e) { /* 缓存不可用则直接请求 */ }
+            }
+            loading = true;
+            el.classList.add('quote-loading');
+            fetch('https://v1.hitokoto.cn/?c=d&c=i&c=k&max_length=32')
+                .then(function (r) { return r.json(); })
+                .then(function (d) {
+                    apply(d);
+                    try { sessionStorage.setItem(KEY, JSON.stringify({ date: new Date().toDateString(), hitokoto: d.hitokoto, from_who: d.from_who, from: d.from })); } catch (e) {}
+                })
+                .catch(function () { /* 静默降级：保留默认句 */ })
+                .finally(function () { loading = false; el.classList.remove('quote-loading'); });
+        }
+
+        el.addEventListener('click', function () { load(true); });
+        load(false);
+    })();
+    </script>
+</section>

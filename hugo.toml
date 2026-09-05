@@ -21,6 +21,7 @@ paginate = 10
 
   [params.widgets]
     homepage = [
+      { type = "quote" },
       { type = "search" },
       { type = "categories" },
       { type = "tag-cloud" }
