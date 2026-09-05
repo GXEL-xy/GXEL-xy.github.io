@@ -1,5 +1,5 @@
-{{- /* 人生谏言 widget：一言 API + 当天缓存 + 点击换句 + 离线降级 */ -}}
-{{- $p := merge (dict "title" "人生谏言" "default" "但行好事，莫问前程。" "defaultFrom" "《增广贤文》") .Params -}}
+{{- /* 人生谏言 widget：毛泽东语录池 + 当天缓存 + 点击换句 */ -}}
+{{- $p := merge (dict "title" "人生谏言") .Params -}}
 <section class="widget widget-quote" id="quote-widget" title="点击换一句">
     <div class="widget-icon">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M9.6 5C6 5 3.2 7.9 3.2 11.5c0 3.4 2.6 6.1 5.9 6.1.5 0 .9-.1 1.2-.2-.8 1.4-2.1 2.4-3.7 2.9l.8 1.7c3.9-1.2 6.6-4.9 6.6-9.2C14 8 12.2 5 9.6 5Zm10 0C16 5 13.2 7.9 13.2 11.5c0 3.4 2.6 6.1 5.9 6.1.4 0 .8-.1 1.2-.2-.8 1.4-2.1 2.4-3.7 2.9l.8 1.7c3.9-1.2 6.6-4.9 6.6-9.2C24 8 22.2 5 19.6 5Z"/></svg>
@@ -7,8 +7,8 @@
     <h2 class="widget-title section-title">{{ $p.title }}</h2>
 
     <div class="widget-quote-body">
-        <p class="quote-text">{{ $p.default }}</p>
-        <footer class="quote-meta">—— {{ $p.defaultFrom }}</footer>
+        <p class="quote-text">{{ index .Params "default" | default "为人民服务。" }}</p>
+        <footer class="quote-meta">—— {{ index .Params "defaultFrom" | default "毛泽东《为人民服务》（1944）" }}</footer>
     </div>
 
     <script>
@@ -17,36 +17,48 @@
         if (!el) return;
         var textEl = el.querySelector('.quote-text');
         var metaEl = el.querySelector('.quote-meta');
-        var KEY = 'hitokoto-of-day';
-        var loading = false;
+        var KEY = 'quote-of-day';
 
-        function apply(d) {
-            if (!d || !d.hitokoto) return;
-            textEl.textContent = d.hitokoto;
-            var who = (d.from_who || '').trim();
-            var from = (d.from || '').trim();
-            var src = [who, from].filter(Boolean).join(' · ');
-            metaEl.textContent = '—— ' + (src || '佚名');
+        // 毛泽东经典语录池
+        var QUOTES = [
+            { t: '为人民服务。', f: '毛泽东《为人民服务》（1944）' },
+            { t: '实事求是。', f: '毛泽东《改造我们的学习》（1941）' },
+            { t: '星星之火，可以燎原。', f: '毛泽东《星星之火，可以燎原》（1930）' },
+            { t: '世上无难事，只要肯登攀。', f: '毛泽东《水调歌头·重上井冈山》（1965）' },
+            { t: '一万年太久，只争朝夕。', f: '毛泽东《满江红·和郭沫若同志》（1963）' },
+            { t: '不管风吹浪打，胜似闲庭信步。', f: '毛泽东《水调歌头·游泳》（1956）' },
+            { t: '谦虚使人进步，骄傲使人落后。', f: '毛泽东在中共八大的开幕词（1956）' },
+            { t: '牢骚太盛防肠断，风物长宜放眼量。', f: '毛泽东《七律·和柳亚子先生》（1949）' },
+            { t: '雄关漫道真如铁，而今迈步从头越。', f: '毛泽东《忆秦娥·娄山关》（1935）' },
+            { t: '踏遍青山人未老，风景这边独好。', f: '毛泽东《清平乐·会昌》（1934）' },
+            { t: '好好学习，天天向上。', f: '毛泽东题词' },
+            { t: '自信人生二百年，会当水击三千里。', f: '毛泽东青年时代诗句' }
+        ];
+
+        function apply(q) {
+            if (!q) return;
+            textEl.textContent = q.t;
+            metaEl.textContent = '—— ' + q.f;
+        }
+
+        function pick(excludeIdx) {
+            var i;
+            do { i = Math.floor(Math.random() * QUOTES.length); } while (QUOTES.length > 1 && i === excludeIdx);
+            return i;
         }
 
         function load(force) {
-            if (loading) return;
+            var idx = null;
             if (!force) {
                 try {
                     var cached = JSON.parse(sessionStorage.getItem(KEY) || 'null');
-                    if (cached && cached.date === new Date().toDateString()) { apply(cached); return; }
-                } catch (e) { /* 缓存不可用则直接请求 */ }
+                    if (cached && cached.date === new Date().toDateString()) idx = cached.idx;
+                } catch (e) { /* 缓存不可用则随机 */ }
             }
-            loading = true;
-            el.classList.add('quote-loading');
-            fetch('https://v1.hitokoto.cn/?c=d&c=i&c=k&max_length=32')
-                .then(function (r) { return r.json(); })
-                .then(function (d) {
-                    apply(d);
-                    try { sessionStorage.setItem(KEY, JSON.stringify({ date: new Date().toDateString(), hitokoto: d.hitokoto, from_who: d.from_who, from: d.from })); } catch (e) {}
-                })
-                .catch(function () { /* 静默降级：保留默认句 */ })
-                .finally(function () { loading = false; el.classList.remove('quote-loading'); });
+            if (idx === null) idx = pick(null);
+            apply(QUOTES[idx]);
+            try { sessionStorage.setItem(KEY, JSON.stringify({ date: new Date().toDateString(), idx: idx })); } catch (e) {}
+            el._idx = idx;
         }
 
         el.addEventListener('click', function () { load(true); });

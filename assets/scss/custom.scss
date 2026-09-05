@@ -188,3 +188,23 @@ article.main-article .content {
         opacity: 0.8;
     }
 }
+
+/* ---------- 7. 五星红旗页面背景 ---------- */
+/* 旗帜完整铺底（cover + fixed），上方叠半透明遮罩保证文字可读；
+   卡片本身不透明，正文不受影响 */
+body {
+    background: var(--body-background) url('/images/national-flag.svg') center / cover no-repeat fixed;
+
+    &::before {
+        content: '';
+        position: fixed;
+        inset: 0;
+        z-index: -1; /* 位于 body 背景之上、页面内容之下 */
+        background: rgba(255, 255, 255, 0.82);
+        pointer-events: none;
+    }
+}
+
+html[data-scheme='dark'] body::before {
+    background: rgba(24, 24, 28, 0.88);
+}
