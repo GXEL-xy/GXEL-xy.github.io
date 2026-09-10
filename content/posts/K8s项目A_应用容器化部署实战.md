@@ -773,7 +773,7 @@ mkdir -p ~/k8s-projects/wordpress
 
 **README 模板要点**：项目一句话介绍、架构图、四阶段 Check 清单勾选结果、各验证演示的截图/录屏、遇到的坑与解决。
 
-### 5.7 阶段 3 完成标准（= 项目 A 交付）
+### 5.7 阶段 3 完成标准
 
 - [ ] `kubectl get ingress -n wordpress` → 规则存在
 - [ ] `curl --resolve blog.example.com:80:<节点IP> http://blog.example.com/` → 返回 WordPress 页面
