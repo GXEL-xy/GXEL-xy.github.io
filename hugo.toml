@@ -58,7 +58,7 @@ paginate = 10
 # ========== 中文(默认语言) ==========
 [languages.zh-cn]
   locale = "zh-cn"
-  languageName = "简体中文"
+  label = "简体中文"
   title = "GXEL的个人网站"
   weight = 1
   contentDir = "content"
@@ -91,7 +91,7 @@ paginate = 10
 # ========== 英文 ==========
 [languages.en]
   locale = "en"
-  languageName = "English"
+  label = "English"
   title = "GXEL's Website"
   weight = 2
   contentDir = "content-en"
@@ -120,3 +120,6 @@ paginate = 10
       name = "Tags"
       url = "/tags/"
       weight = 4
+
+[markup.goldmark.renderer]
+  unsafe = true               # 渲染 Markdown 中的自有 HTML（如表格内 <br> 换行）
