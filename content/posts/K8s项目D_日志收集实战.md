@@ -10,8 +10,34 @@ categories: [项目]
 > 📦 **项目文件包**：[下载 K8s项目D_Loki日志.zip](/files/K8s项目D_Loki日志.zip)（含全部 YAML manifests——Loki 配置与部署、告警规则、Fluent Bit 在役配置及 promtail 存档，可直接拷到集群 master 使用）。本文件是详细操作手册，两者配合。
 
 > **系列定位**：K8s 运维实习项目路线图第 4 站——A 应用容器化 → B CI/CD 流水线 → C 监控告警 → **D 日志收集**。
-> **版本基线（已验证）**：Kubernetes v1.35.7 ／ containerd 2.x ／ Ubuntu 24.04 ／ Grafana 11.1.0 ／ **Loki 3.3.2 ／ Fluent Bit 3.2.2（定版采集器）**。
-> **文档版本**：v3.0——采集器主线正式定版 Fluent Bit；promtail 在本环境因 kubernetes_sd 与 API Server 静默不兼容被替换，完整战役复盘见**附录 C**（面试叙事素材，值得通读）。
+> **版本基线**：Kubernetes v1.35.7 ／ containerd 2.x ／ Ubuntu 24.04 ／ Grafana 11.1.0 ／ **Loki 3.3.2 ／ Fluent Bit 3.2.2（定版采集器）**。
+
+---
+
+> **📖 怎么用这份文档**
+>
+> - **前置依赖**：项目 C 已完成（Grafana 与私有仓库可直接复用）；集群节点有足够磁盘
+> - **预计耗时**：4–6 小时
+> - **学习路径**：阶段 1 日志采集原理 → 阶段 2 镜像准备 → 阶段 3 Loki → 阶段 4 Fluent Bit（核心）→ 阶段 5 Grafana 检索 → 阶段 6 保留策略 → 阶段 7 日志告警
+> - **验收标准**：Grafana Explore 里能按 `namespace`/`pod` 标签查到业务日志；LogQL 四级查询都能跑通
+
+## 目录
+
+- [0. 项目概览](#0-项目概览)
+- [阶段 1：先懂再装——日志采集原理](#阶段-1先懂再装日志采集原理)
+- [阶段 2：镜像准备](#阶段-2镜像准备)
+- [阶段 3：Loki](#阶段-3loki)
+- [阶段 4：Fluent Bit 采集器★本项目核心](#阶段-4fluent-bit-采集器本项目核心)
+- [阶段 5：Grafana 接入与日志检索](#阶段-5grafana-接入与日志检索)
+- [阶段 6：日志保留与磁盘管理](#阶段-6日志保留与磁盘管理)
+- [阶段 7：日志告警](#阶段-7日志告警)
+- [阶段 8：全链路验证与面试演示](#阶段-8全链路验证与面试演示)
+- [9. 故障速查表](#9-故障速查表)
+- [10. 自测题](#10-自测题)
+- [11. 面试要点与简历写法](#11-面试要点与简历写法)
+- [12. 学习资源](#12-学习资源)
+- [附录 A：文件清单](#附录-a文件清单)
+- [附录 B：进阶路线——Grafana Alloy（生产主流）](#附录-b进阶路线grafana-alloy生产主流)
 
 ---
 
@@ -112,7 +138,7 @@ grep -rn "__NODE_NAME__" . || echo "✅ 占位符已全部替换"
 
 ## 阶段 1：先懂再装——日志采集原理
 
-### 1.0 开胃故事：一座"图书馆"（先建立直觉）
+### 1.0 开胃故事：一座"图书馆"
 
 日志系统的三个组件，合起来就是一座"给集装箱小区做 7×24 记录"的图书馆。**读不懂原理时，回来重读这一节。**
 
@@ -143,7 +169,7 @@ grep -rn "__NODE_NAME__" . || echo "✅ 占位符已全部替换"
 2. **采集软链必须同时能解析真实文件**。只挂 `/var/log/containers` 而不挂 `/var/log/pods`，软链解不开 → 静默采不到（见 9.2）。
 3. **CRI 前缀必须解析**。不解析的话每行日志的时间戳都是"被采集的时刻"，正文前面还挂着一大串元信息——`cri` parser 就是为它准备的。
 
-### 1.2 Loki 数据模型：只索引标签（面试必背，逐条吃透）
+### 1.2 Loki 数据模型：只索引标签
 
 **① 日志流（stream）是 Loki 的最小管理单元。**
 一组标签组合完全相同的日志行 = 一条流。例如 `{namespace="default", pod="damo-app-xxx", container="app"}` 就是一条流。Loki 收到日志先按标签算出流的指纹，同一条流的日志顺序压缩存储。
@@ -195,7 +221,7 @@ Loki 是 Prometheus 团队的"日志兄弟"，查询语言刻意对齐：
 
 ---
 
-## 阶段 2：镜像准备（5 分钟，两条路线任选）
+## 阶段 2：镜像准备
 
 ### 路线 A：节点直拉公共仓库（Fluent Bit 定版路线）
 
@@ -231,7 +257,7 @@ curl -s http://11.0.1.128:30000/v2/grafana/loki/tags/list
 
 ---
 
-## 阶段 3：Loki（日志的"数据库"，30 分钟）
+## 阶段 3：Loki
 
 ### 3.0 组件工作原理（先懂再装）
 
@@ -369,7 +395,7 @@ curl -s 'http://10.106.154.53:3100/loki/api/v1/labels'
 
 ---
 
-## 阶段 4：Fluent Bit 采集器（30 分钟）★本项目核心
+## 阶段 4：Fluent Bit 采集器★本项目核心
 
 ### 4.0 组件工作原理（先懂再装）
 
@@ -496,7 +522,7 @@ spec:
         - {name: positions, hostPath: {path: /var/log/fluent-bit, type: DirectoryOrCreate}}
 ```
 
-### 4.2 YAML 关键设计逐条讲（每条都是面试点）
+### 4.2 YAML 关键设计逐条讲
 
 | # | 设计 | 为什么（面试语言） |
 |---|------|------------------|
@@ -509,7 +535,7 @@ spec:
 | 7 | tolerations 容忍 control-plane | master 默认 NoSchedule 污点；不容忍则 master 日志全部漏采（DaemonSet 只剩 2 个节点） |
 | 8 | 直拉公共镜像 | fluent-bit 官方镜像为 Buildx 多架构清单，中转 push 到 registry:2 会报格式不兼容；containerd 2.x 直拉原生支持 OCI index——**选直拉反而是兼容性最优解** |
 
-### 4.3 验证（四步，全部通过才算过）
+### 4.3 验证
 
 ```bash
 # ① Pod 分布：3 节点各 1 个，全部 1/1 Running
@@ -535,7 +561,7 @@ curl -s -G 'http://10.106.154.53:3100/loki/api/v1/query_range' \
 
 ---
 
-## 阶段 5：Grafana 接入与日志检索（40 分钟）
+## 阶段 5：Grafana 接入与日志检索
 
 ### 5.1 添加 Loki 数据源
 
@@ -546,7 +572,7 @@ curl -s -G 'http://10.106.154.53:3100/loki/api/v1/query_range' \
 3. **URL** 填 `http://loki.monitoring.svc.cluster.local:3100`（跨 ns 场景写完整 FQDN；Grafana 与 Loki 同在 monitoring ns 时可写 `http://loki:3100` 短名）；
 4. 点 **Save & test** → 预期绿色 `Successfully queried the Loki API.`
 
-### 5.2 Explore 界面导览（对照页面学）
+### 5.2 Explore 界面导览
 
 | 界面元素 | 位置 | 作用 | 本项目用法 |
 |---------|------|------|-----------|
@@ -558,7 +584,7 @@ curl -s -G 'http://10.106.154.53:3100/loki/api/v1/query_range' \
 | 日志行标签徽章 | 每行左侧 | 点徽章 = 加进选择器过滤 | 点 `pod=xxx` 快速收窄 |
 | 日志行展开 | 每行右侧箭头 | 看完整行 + 原始 JSON | 看堆栈全文 |
 
-### 5.3 LogQL 四级进阶（每一级都在 Explore 里亲手跑）
+### 5.3 LogQL 四级进阶
 
 **L1 标签选择器**（先看流）：
 
@@ -633,7 +659,7 @@ sum by (pod) (count_over_time({namespace="$namespace", pod=~"$pod"} |= "error" [
 
 ---
 
-## 阶段 6：日志保留与磁盘管理（15 分钟）
+## 阶段 6：日志保留与磁盘管理
 
 ### 6.1 确认保留机制在工作
 
@@ -645,7 +671,7 @@ du -sh /var/local-path-provisioner/*/ 2>/dev/null | sort -h | tail -5
 # 预期：能看到 loki-data 对应目录及大小（随日志量增长）
 ```
 
-### 6.2 磁盘水位与应对（预案，背下来）
+### 6.2 磁盘水位与应对
 
 | 信号 | 动作 |
 |------|------|
@@ -667,7 +693,7 @@ kubectl apply -f <文件> && kubectl -n monitoring rollout restart deploy/loki d
 
 ---
 
-## 阶段 7：日志告警（进阶可选，30 分钟）
+## 阶段 7：日志告警
 
 ### 7.0 原理：ruler 是什么，链路怎么走
 
@@ -722,7 +748,7 @@ kubectl -n monitoring rollout restart deploy/loki     # 挂载变更需重启生
 > ① `auth_enabled: false` 时单租户固定叫 **fake**，Loki 只按 `<rules_directory>/<tenant>/*.yml` 加载——挂到 `/loki/rules` 根目录则规则永远不加载，**且不报错**（静默失败，面试级细节）；
 > ② 本项目用**整目录挂载**（非 subPath），`rollout restart` 即可让变更生效；`poll_interval: 1m` 会自动重读规则内容。
 
-### 7.3 Alertmanager 放行（改项目 C 的 07）
+### 7.3 Alertmanager 放行
 
 编辑项目 C 的 `07-alertmanager-config.yaml`，在 `route:` 下追加子路由（放在既有节点告警子路由之后）：
 
@@ -972,7 +998,3 @@ helm install alloy grafana/alloy -n monitoring \
 Alloy 优势（面试可讲）：① 一个组件统一指标/日志/trace 多管道；② River/HCL 配置可条件化、模块化；③ 官方提供 Promtail 配置转换工具；④ 与 OTel 生态对齐。
 
 > 面试话术："我在自建集群里经历过 promtail 的 kubernetes_sd 静默失效，最终用 Fluent Bit 的零 API 标签方案解决；如果重建集群，我会直接上 Alloy——采集层的这个坑让我把三个采集器的取舍都摸了一遍。"
-
----
-
-> 文档版本：v3.0（2026-09-08，采集器主线定版 Fluent Bit；promtail 战役复盘沉淀至附录 C 与 9.2 实战案例）。配套文件：`K8s项目D_Loki日志\manifests\`（在役 6 份 + archive 存档 3 份）与 `K8s项目D_Loki日志.zip`。执行中遇到文档未覆盖的现象，先走 9.6 排障方法论，再补录进本文档沉淀为团队知识库。

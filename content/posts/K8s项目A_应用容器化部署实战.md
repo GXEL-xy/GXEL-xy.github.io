@@ -15,9 +15,31 @@ categories: [项目]
 
 ---
 
-## 一、项目总览
+> **📖 怎么用这份文档**
+>
+> - **前置依赖**：三节点集群已就绪（`kubectl get nodes` 3/3 Ready）；本机或 master 已装 docker、kubectl。
+> - **预计耗时**：4–6 小时（含排障）；纯操作约 2 小时。
+> - **学习路径**：先读每节开头的「本阶段四要素」→ 照着命令做 → 跑「完成标准」自检 → 卡住先查第 4 章故障速查表。
+> - **验收标准**：四个阶段的「完成标准」全部打勾，第 5 章自测题答对 8 题以上。
 
-### 1.1 架构
+## 目录
+
+- [0. 项目概览](#0-项目概览)
+- [阶段 1：环境地基检查](#阶段-1环境地基检查)
+- [阶段 2：MySQL 数据库先行](#阶段-2mysql-数据库先行)
+- [阶段 3：WordPress 应用上线](#阶段-3wordpress-应用上线)
+- [阶段 4：Ingress 暴露 + 全链路验证](#阶段-4ingress-暴露--全链路验证)
+- [4. 故障速查表](#4-故障速查表)
+- [5. 自测题（含答案）](#5-自测题含答案)
+- [6. 面试要点与简历写法](#6-面试要点与简历写法)
+- [7. 学习资源（官方文档）](#7-学习资源官方文档)
+- [附录 A：文件包清单与操作顺序](#附录-a文件包清单与操作顺序)
+
+---
+
+## 0. 项目概览
+
+### 0.1 架构
 
 ```
                          ┌────────────────────────────┐
@@ -45,20 +67,20 @@ categories: [项目]
                          └────────────────────────────┘
 ```
 
-### 1.2 覆盖知识点清单（与技能清单对应）
+### 0.2 覆盖知识点清单（与技能清单对应）
 
 | 技能点 | 本项目体现 | 所在阶段 |
 |--------|-----------|---------|
-| Docker 镜像工程化 | 多阶段构建、镜像瘦身、私有仓库 | 阶段 2 |
-| ConfigMap / Secret | wp 配置参数化、数据库密码 | 阶段 1/2 |
-| 存储 PV / PVC / StorageClass | MySQL 持久化、动态供给 | 阶段 1 |
-| StatefulSet | MySQL 有状态部署、Headless Service | 阶段 1 |
-| Deployment | WordPress 滚动更新、探针、资源限制 | 阶段 2 |
-| Service | ClusterIP、Headless、NodePort 调试 | 阶段 1/2 |
-| Ingress | 域名路由、TLS 可选 | 阶段 3 |
+| Docker 镜像工程化 | 多阶段构建、镜像瘦身、私有仓库 | 阶段 3 |
+| ConfigMap / Secret | wp 配置参数化、数据库密码 | 阶段 2/3 |
+| 存储 PV / PVC / StorageClass | MySQL 持久化、动态供给 | 阶段 2 |
+| StatefulSet | MySQL 有状态部署、Headless Service | 阶段 2 |
+| Deployment | WordPress 滚动更新、探针、资源限制 | 阶段 3 |
+| Service | ClusterIP、Headless、NodePort 调试 | 阶段 2/3 |
+| Ingress | 域名路由、TLS 可选 | 阶段 4 |
 | 排障四件套 | 全程用于定位问题 | 全程 |
 
-### 1.3 目录结构（建议固定，面试可展示）
+### 0.3 目录结构（建议固定，面试可展示）
 
 ```
 ~/k8s-projects/wordpress/
@@ -78,12 +100,12 @@ categories: [项目]
 └── troubleshooting.md           # 故障演练记录
 ```
 
-### 1.4 实施流程总览（先看这个）
+### 0.4 实施流程总览（先看这个）
 
 > 不要按 Step 1→9 线性走。**按依赖倒序 + 每阶段可验证**推进，每阶段结束都有一个能演示的结果。
 
 ```
-阶段 0 · 环境地基检查 ──▶ 阶段 1 · MySQL 数据库先行 ──▶ 阶段 2 · WordPress 应用上线 ──▶ 阶段 3 · Ingress 暴露 + 全链路验证
+阶段 1 · 环境地基检查 ──▶ 阶段 2 · MySQL 数据库先行 ──▶ 阶段 3 · WordPress 应用上线 ──▶ 阶段 4 · Ingress 暴露 + 全链路验证
 ```
 
 **为什么是这个顺序（面试会问）**：
@@ -94,7 +116,7 @@ categories: [项目]
 | 风险前置 | 最容易失败的环节（存储、私有仓库拉镜像）放最前面做，失败成本最低；最后只剩"锦上添花"步骤 |
 | 配置先行 | ConfigMap/Secret 先定义好，Deployment 直接引用，避免改配置反复重启 Pod |
 
-### 1.5 实施 Check 清单（可打印，边做边勾）
+### 0.5 实施 Check 清单（可打印，边做边勾）
 
 | ☐ | 阶段 | 检查项 | 命令/操作 | 通过标准 |
 |----|------|--------|----------|---------|
@@ -121,18 +143,18 @@ categories: [项目]
 
 ---
 
-## 二、阶段 0：环境地基检查
+## 阶段 1：环境地基检查
 
-### 2.1 本阶段四要素
+### 1.1 本阶段四要素
 
 | 要素 | 内容 |
 |------|------|
 | **干什么** | 确认集群健康、StorageClass 就绪、Ingress Controller 已装、工具链齐全 |
-| **为什么** | 这三件事是所有后续步骤的"基础设施服务"：没 SC 则 PVC 永远 Pending；没 Ingress 则阶段 3 无法做；工具缺了中途才发现会打断节奏 |
+| **为什么** | 这三件事是所有后续步骤的"基础设施服务"：没 SC 则 PVC 永远 Pending；没 Ingress 则阶段 4 无法做；工具缺了中途才发现会打断节奏 |
 | **怎么做** | 见 2.2-2.5 四步 |
 | **怎么验证** | 3/3 Ready；SC 出现且 local-path-provisioner Pod 正常；ingress-nginx controller Running |
 
-### 2.2 确认集群健康
+### 1.2 确认集群健康
 
 ```bash
 kubectl get nodes -o wide
@@ -146,7 +168,7 @@ kubectl exec test -- nslookup kubernetes.default.svc.cluster.local
 kubectl delete pod test
 ```
 
-### 2.3 检查/安装 StorageClass
+### 1.3 检查/安装 StorageClass
 
 ```bash
 kubectl get sc
@@ -161,9 +183,9 @@ kubectl get sc
 kubectl get pods -n local-path-storage
 ```
 
-> **local-path 与 NFS 的选择**：测试环境用 local-path（5 分钟装好，数据在节点本地）；生产多节点共享存储用 NFS Provisioner（数据可跨节点迁移）。本项目先用 local-path，阶段 3 末尾给出 NFS 升级路径。
+> **local-path 与 NFS 的选择**：测试环境用 local-path（5 分钟装好，数据在节点本地）；生产多节点共享存储用 NFS Provisioner（数据可跨节点迁移）。本项目先用 local-path，阶段 4 末尾给出 NFS 升级路径。
 
-### 2.4 安装 Ingress Controller（nginx-ingress）
+### 1.4 安装 Ingress Controller（nginx-ingress）
 
 ```bash
 helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
@@ -175,7 +197,7 @@ kubectl get pods -n ingress-nginx -w        # 等 controller Running
 kubectl get svc -n ingress-nginx            # 记录外部端口（NodePort）
 ```
 
-### 2.5 确认工具链
+### 1.5 确认工具链
 
 ```bash
 docker --version
@@ -183,7 +205,7 @@ kubectl version --client
 helm version
 ```
 
-### 2.6 阶段 0 完成标准
+### 1.6 阶段 1 完成标准
 
 - [ ] `kubectl get nodes` → 3/3 Ready
 - [ ] `kubectl get sc` → local-path 存在且正常
@@ -192,9 +214,9 @@ helm version
 
 ---
 
-## 三、阶段 1：MySQL 数据库先行
+## 阶段 2：MySQL 数据库先行
 
-### 3.1 本阶段四要素
+### 2.1 本阶段四要素
 
 | 要素 | 内容 |
 |------|------|
@@ -203,7 +225,7 @@ helm version
 | **怎么做** | 按 3.2 → 3.3 → 3.4 → 3.5 顺序执行（StatefulSet 引用了 Secret，顺序不能反） |
 | **怎么验证** | PVC **Bound**；能进 MySQL；**删 Pod 数据不丢**（关键演示） |
 
-### 3.2 步骤 1：创建 Namespace
+### 2.2 步骤 1：创建 Namespace
 
 ```yaml
 # k8s/00-namespace.yaml
@@ -223,7 +245,7 @@ kubectl get ns wordpress
 
 > **为什么用 Namespace**：资源隔离 + 权限边界（RBAC 按 ns 授权）+ 清理方便（`kubectl delete ns wordpress` 一键删除全部）。
 
-### 3.3 步骤 2：创建 Secret（数据库密码）
+### 2.3 步骤 2：创建 Secret（数据库密码）
 
 ```yaml
 # k8s/02-secret.yaml
@@ -246,7 +268,7 @@ kubectl -n wordpress get secret mysql-secret -o yaml
 echo -n "V3BQYXNzQDIwMjY=" | base64 -d   # 可逆，生产要用 KMS/Vault
 ```
 
-### 3.4 步骤 3：声明 StorageClass（如无默认 SC）
+### 2.4 步骤 3：声明 StorageClass（如无默认 SC）
 
 ```yaml
 # k8s/03-storageclass.yaml
@@ -261,7 +283,7 @@ volumeBindingMode: Immediate
 
 > **reclaimPolicy 面试点**：`Delete` = PVC 删除时 PV 和数据一起删（测试环境）；`Retain` = 保留数据，需手动处理（生产数据库环境）。
 
-### 3.5 步骤 4：MySQL StatefulSet（核心）
+### 2.5 步骤 4：MySQL StatefulSet（核心）
 
 **为什么 MySQL 用 StatefulSet 而不是 Deployment**：
 
@@ -367,7 +389,7 @@ spec:
 
 > **Headless Service 作用**：`mysql-0.mysql.wordpress.svc.cluster.local` 直接解析到 Pod IP。有状态应用的每个副本都有独立稳定 DNS。WordPress 在同一 ns 用 `mysql` 就能连上。
 
-### 3.6 步骤 5：验证 MySQL
+### 2.6 步骤 5：验证 MySQL
 
 ```bash
 kubectl apply -f k8s/04-mysql-statefulset.yaml
@@ -388,7 +410,7 @@ kubectl -n wordpress exec -it mysql-0 -- mysql -uroot -p'RootPass@2026' -e "SHOW
 # 数据还在 → 因为 PVC 是独立的，Pod 重建只是重新挂载
 ```
 
-### 3.7 阶段 1 完成标准
+### 2.7 阶段 2 完成标准
 
 - [ ] `kubectl get pvc -n wordpress` → data-mysql-0 **Bound**
 - [ ] `kubectl exec -it mysql-0 -- mysql ...` → 能 SHOW DATABASES
@@ -396,9 +418,9 @@ kubectl -n wordpress exec -it mysql-0 -- mysql -uroot -p'RootPass@2026' -e "SHOW
 
 ---
 
-## 四、阶段 2：WordPress 应用上线
+## 阶段 3：WordPress 应用上线
 
-### 4.1 本阶段四要素
+### 3.1 本阶段四要素
 
 | 要素 | 内容 |
 |------|------|
@@ -407,7 +429,7 @@ kubectl -n wordpress exec -it mysql-0 -- mysql -uroot -p'RootPass@2026' -e "SHOW
 | **怎么做** | 按 4.2 → 4.3 → 4.4 → 4.5 顺序执行 |
 | **怎么验证** | 双副本 Running 且跨节点；Endpoints 有 Pod IP；滚动更新 0 中断；删 Pod 自动重建 |
 
-### 4.2 步骤 1：镜像准备（两条路径）
+### 3.2 步骤 1：镜像准备（两条路径）
 
 **路径 A：直接用官方镜像（本项目主路径）**
 
@@ -423,7 +445,7 @@ image: wordpress:6.5
 > 面试官问"你会写 Dockerfile 吗"时展示。核心是**多阶段构建**：构建阶段有编译工具链（几百 MB），运行阶段只拷产物（几 MB）。
 
 ```dockerfile
-# ===== 阶段 1：构建 =====
+# ===== 构建阶段 =====
 FROM golang:1.22-alpine AS builder
 WORKDIR /app
 COPY go.mod go.sum ./
@@ -431,7 +453,7 @@ RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -o myapp .
 
-# ===== 阶段 2：运行（只拷贝构建产物） =====
+# ===== 运行阶段（只拷贝构建产物） =====
 FROM alpine:3.20
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 WORKDIR /app
@@ -486,7 +508,7 @@ kubectl -n wordpress create secret docker-registry regcred \
 
 > ⚠️ **自建集群拉私有仓库报 ImagePullBackOff 的经典坑**：K8s 默认用 HTTPS 访问 registry，本地 registry 是 HTTP。每个节点都要配置 containerd 信任该非安全仓库（`/etc/containerd/config.toml` 设 insecure registry，`systemctl restart containerd`），或 docker daemon.json 配 `insecure-registries`。
 
-### 4.3 步骤 2：创建 ConfigMap（非敏感配置）
+### 3.3 步骤 2：创建 ConfigMap（非敏感配置）
 
 ```yaml
 # k8s/01-configmap.yaml
@@ -497,7 +519,7 @@ metadata:
   namespace: wordpress
 data:
   WP_DEBUG: "false"
-  WORDPRESS_DB_HOST: mysql            # 对应 Headless Service 名（阶段 1）
+  WORDPRESS_DB_HOST: mysql            # 对应 Headless Service 名（阶段 2）
   WORDPRESS_DB_NAME: wordpress
   WORDPRESS_DB_USER: wpuser
   WORDPRESS_DB_PORT: "3306"
@@ -517,7 +539,7 @@ kubectl apply -f k8s/01-configmap.yaml
 
 > **面试点**：ConfigMap/Secret 更新后，**已运行的 Pod 不会自动拿到新值**（环境变量方式需重启 Pod）。部署时用 `kubectl rollout restart deployment/wordpress` 让新配置生效。
 
-### 4.4 步骤 3：WordPress Deployment（核心）
+### 3.4 步骤 3：WordPress Deployment（核心）
 
 ```yaml
 # k8s/05-wordpress-deployment.yaml
@@ -604,7 +626,7 @@ spec:
 | readinessProbe | 摘除流量（不重启） | 应用启动慢、依赖未就绪 |
 | startupProbe | 同 liveness | 启动期保护（避免慢启动被误杀） |
 
-### 4.5 步骤 4：创建 Service
+### 3.5 步骤 4：创建 Service
 
 ```yaml
 # k8s/06-service.yaml
@@ -614,7 +636,7 @@ metadata:
   name: wordpress
   namespace: wordpress
 spec:
-  type: ClusterIP               # 集群内访问，外部经 Ingress（阶段 3）
+  type: ClusterIP               # 集群内访问，外部经 Ingress（阶段 4）
   selector:
     app: wordpress
   ports:
@@ -638,7 +660,7 @@ kubectl -n wordpress get svc,endpoints
 | NodePort | 每个节点 IP:30000-32767 | 测试环境对外 |
 | LoadBalancer | 云厂商 LB | 公有云生产 |
 
-### 4.6 步骤 5：部署 + 滚动更新/回滚/自愈演示
+### 3.6 步骤 5：部署 + 滚动更新/回滚/自愈演示
 
 ```bash
 # 部署
@@ -656,7 +678,7 @@ kubectl -n wordpress delete pod -l app=wordpress   # 干掉一个 Pod
 kubectl -n wordpress get pods                       # 立即重建新 Pod
 ```
 
-### 4.7 阶段 2 完成标准
+### 3.7 阶段 3 完成标准
 
 - [ ] `kubectl get pods -n wordpress -o wide` → 2 Running 且分布在**不同节点**
 - [ ] `kubectl get endpoints -n wordpress` → 有 Pod IP
@@ -665,9 +687,9 @@ kubectl -n wordpress get pods                       # 立即重建新 Pod
 
 ---
 
-## 五、阶段 3：Ingress 暴露 + 全链路验证
+## 阶段 4：Ingress 暴露 + 全链路验证
 
-### 5.1 本阶段四要素
+### 4.1 本阶段四要素
 
 | 要素 | 内容 |
 |------|------|
@@ -676,7 +698,7 @@ kubectl -n wordpress get pods                       # 立即重建新 Pod
 | **怎么做** | 按 5.2 → 5.3 → 5.4 → 5.5 → 5.6 顺序执行 |
 | **怎么验证** | curl 返回 WordPress 安装页（全链路打通）；MySQL 出现 wp_ 表；文档完成 |
 
-### 5.2 步骤 1：创建 Ingress 资源
+### 4.2 步骤 1：创建 Ingress 资源
 
 ```yaml
 # k8s/07-ingress.yaml
@@ -707,7 +729,7 @@ kubectl apply -f k8s/07-ingress.yaml
 kubectl -n wordpress get ingress
 ```
 
-### 5.3 步骤 2：域名访问验证（无需真实 DNS 的技巧）
+### 4.3 步骤 2：域名访问验证（无需真实 DNS 的技巧）
 
 ```bash
 # 查看 ingress-nginx 的 NodePort
@@ -722,7 +744,7 @@ curl --resolve blog.example.com:80:<节点IP> http://blog.example.com/
 
 **通过标准**：返回 WordPress 安装页 → **全链路打通**（浏览器 → Ingress → Service → Deployment → MySQL）。
 
-### 5.4 步骤 3：全链路验证清单
+### 4.4 步骤 3：全链路验证清单
 
 | 验证项 | 命令 | 通过标准 |
 |--------|------|---------|
@@ -734,7 +756,7 @@ curl --resolve blog.example.com:80:<节点IP> http://blog.example.com/
 | 网络链路 | curl Host 头访问 | 返回 WordPress 页面 |
 | 数据库建表 | `kubectl exec -it mysql-0 -- mysql -e "USE wordpress; SHOW TABLES;"` | wp_posts 等表存在 |
 
-### 5.5 步骤 4：排障四件套 + 高频故障速查
+### 4.5 步骤 4：排障四件套 + 高频故障速查
 
 **排障四件套（贯穿全程）**：
 
@@ -763,7 +785,7 @@ kubectl get events --sort-by=.lastTimestamp   # 全集群事件
 | **apply Ingress 报 webhook 超时** | ingress-nginx admission webhook 的 **caBundle 与证书不匹配**（TCP/TLS 均正常，curl -k 握手成功即证明 controller 正常） | 快速绕过：`kubectl delete validatingwebhookconfiguration ingress-nginx-admission`；根治：`helm uninstall` 后重新 `helm install`（create/patch job 是 post-install hooks，**upgrade 不会触发**） |
 | **WordPress 维护模式** | WordPress 自动更新进入维护模式，更新被中断残留 | 查 `.maintenance`（`find /var/www/html -name ".maintenance"`）；无 PVC 时重建容器即恢复镜像原始文件；长期：wp-config 关自动更新 |
 
-### 5.6 步骤 5：文档沉淀（项目转产出物）
+### 4.6 步骤 5：文档沉淀（项目转产出物）
 
 ```bash
 mkdir -p ~/k8s-projects/wordpress
@@ -773,7 +795,7 @@ mkdir -p ~/k8s-projects/wordpress
 
 **README 模板要点**：项目一句话介绍、架构图、四阶段 Check 清单勾选结果、各验证演示的截图/录屏、遇到的坑与解决。
 
-### 5.7 阶段 3 完成标准
+### 4.7 阶段 4 完成标准（= 项目 A 交付）
 
 - [ ] `kubectl get ingress -n wordpress` → 规则存在
 - [ ] `curl --resolve blog.example.com:80:<节点IP> http://blog.example.com/` → 返回 WordPress 页面
@@ -783,3 +805,111 @@ mkdir -p ~/k8s-projects/wordpress
 
 ---
 
+---
+
+## 4. 故障速查表
+
+> **用法**：按「现象」查，不要按「原因」查——现场排障时你只知道现象。
+> 阶段 4 的 4.5 讲的是**排障方法**（四件套 + 判断顺序），这一章是**全项目故障索引**，8 条全部来自本次实施的实况记录。
+> ★ 标记的是面试高频考点。
+
+| # | 现象 | 根因 | 判定依据 | 解决 |
+|---|------|------|---------|------|
+| 1 | ★ Pod `0/1 Running`，RESTARTS 持续增长，Events 里有 `Liveness probe failed` | httpGet 探针 `timeoutSeconds` 默认 **1 秒**，PHP 冷启动首页 >1s 被杀 | `describe` 看到 `Killing` + 前面有 `probe failed` | 探针改 `tcpSocket`（只探端口，不等页面） |
+| 2 | ★ `kubectl apply` Ingress 报 `context deadline exceeded` | admission webhook 的 `caBundle` 与 controller 证书不匹配，TLS 握手失败 | controller 日志有 TLS 错误；`curl -k` 握手却成功 → 说明 controller 活着，是信任链问题 | 应急：`kubectl delete validatingwebhookconfiguration ingress-nginx-admission`；根治：`helm uninstall` 后重装（create/patch job 是 post-install hook，`upgrade` 不会重跑） |
+| 3 | `curl` 通，浏览器 502 | Chrome HTTPS-First 或系统代理劫持了请求 | 终端 `curl` 200/302，浏览器 502 | 关 HTTPS-First、关代理；用 `curl --resolve` 做对照 |
+| 4 | 用 IP 直接访问 502 | Ingress 按 Host 匹配，IP 没有匹配规则 | `get ingress` 里 host 是域名 | `/etc/hosts` 把域名指到节点 IP |
+| 5 | `curl` 返回 nginx 的 503 页 | Service 没有 ready Endpoint（对应 Pod 探针失败） | `kubectl get endpoints` 为空 | 先修 Pod 的探针，Endpoint 自动恢复 |
+| 6 | 浏览器显示 `scheduled maintenance` | WordPress 自动更新中断，留下 `.maintenance` 文件 | `find /var/www/html -name ".maintenance"` | 删掉该文件；无 PVC 时重建容器即可回到镜像原始状态 |
+| 7 | Startup probe 报 `:32541 connection refused` | 探针 `port` 误写成 NodePort | YAML 里 port 是 32541 而非 80 | 改成容器端口 80 |
+| 8 | 探针日志只有 301，随后超时 | kube-probe 跟随 `GET /` 的 301 到 `install.php`，该页在低配 VM 执行 >10s | 探针日志里 301 之后无完成记录 | 同 #1，改 `tcpSocket` |
+
+**一句话总纲**：探针只管「端口活没活」，不要让它去评价「页面快不快」——后者交给 readiness 和真实用户流量。
+
+---
+
+## 5. 自测题（含答案）
+
+先自己做，再展开对照。
+
+1. MySQL 为什么必须用 StatefulSet，用 Deployment 会出什么问题？
+2. Secret 是「加密」的吗？拿到 Secret 的 base64 意味着什么？
+3. 删掉 `mysql-0` 这个 Pod，数据会丢吗？删掉 PVC 呢？
+4. Headless Service（`clusterIP: None`）在这里起什么作用？
+5. liveness、readiness、startup 三种探针分别解决什么问题？
+6. `httpGet` 探针的 `timeoutSeconds` 默认值是多少？为什么这个默认值在 PHP 应用上很危险？
+7. Ingress 资源和 Ingress Controller 是一回事吗？
+8. `replicas: 1` 的 Deployment 做滚动更新，会中断吗？
+
+<details>
+<summary>参考答案</summary>
+
+1. StatefulSet 给每个 Pod **稳定的名字和稳定的存储**（`mysql-0` 永远挂 `data-mysql-0`）。Deployment 的 Pod 名字随机、PVC 共享或丢失，MySQL 主从/数据目录会错乱。
+2. 不是加密，只是 base64 编码。能读 Secret 就能解出明文；etcd 默认也是明文存（除非开启 encryption at rest）。所以 Secret 的安全边界是 **RBAC**，不是编码。
+3. 删 Pod 不丢——PVC 独立存在，Pod 重建后重新挂载。删 PVC 才会丢（取决于 StorageClass 的 `reclaimPolicy`，`Delete` 会连底层卷一起删）。
+4. 给每个 Pod 一条稳定 DNS：`mysql-0.mysql.wordpress.svc.cluster.local`。StatefulSet 的「稳定网络标识」就靠它，否则 Pod 重建后 IP 变了，客户端配置就失效。
+5. liveness 失败 → **重启容器**；readiness 失败 → **从 Endpoints 摘掉**（不接流量，但不重启）；startup 成功前，liveness/readiness 都不生效（保护慢启动应用）。
+6. 默认 **1 秒**。PHP 首页冷启动经常 1–3 秒，探针直接判死 → 容器被反复 kill → 永远起不来。
+7. 不是。Ingress 只是一份**路由规则**（声明），Ingress Controller 才是真正干活的代理（nginx-ingress）。没有 Controller，Ingress 对象建了也不生效。
+8. 会。默认 `maxUnavailable: 25%` 向上取整 = 1，即先删掉唯一副本再建新的，中间有中断窗口。要零中断：副本数 ≥2，或设 `maxUnavailable: 0` + `maxSurge: 1`。
+
+</details>
+
+---
+
+## 6. 面试要点与简历写法
+
+### 6.1 一句话介绍
+
+> 在一个三节点自建集群上，把 WordPress + MySQL 从 Dockerfile 一路做到 Ingress 对外访问，覆盖了镜像构建、配置与密钥管理、有状态存储、滚动更新与自愈、七层路由和故障排查的完整链路。
+
+### 6.2 三个值得展开讲的决策
+
+| 决策 | 为什么这么做 | 换来的结果 |
+|---|---|---|
+| **MySQL 用 StatefulSet + volumeClaimTemplates** | 数据库要稳定身份和独立存储，Pod 重建后必须挂回同一块盘 | `mysql-0` 删除重建，数据仍在 |
+| **探针从 httpGet 改成 tcpSocket** | httpGet 会等页面返回，PHP 冷启动 >1s 就触发默认 1s 超时；tcpSocket 只验证端口可连 | 从「反复重启」变成「稳定 Running」 |
+| **配置拆成 ConfigMap + Secret** | 同一镜像可在不同环境复用；改配置不用重新构建镜像 | 镜像与配置解耦，发布只改变量 |
+
+### 6.3 高频追问
+
+| 追问 | 怎么答 |
+|---|---|
+| 为什么不用 `hostPath` 存数据？ | 数据绑死在某个节点，Pod 漂移到别的节点就丢了；PV/PVC 把「存储」和「节点」解耦 |
+| Secret 怎么才算真的安全？ | 开 etcd 静态加密 + 收紧 RBAC + 必要时接 KMS/Vault；编码不等于加密 |
+| 单副本怎么做到滚动更新不中断？ | 副本数提到 2 以上，或 `maxUnavailable: 0` + `maxSurge: 1`（先起新的再删旧的） |
+| 数据怎么备份？ | `mysqldump` 进 CronJob 写到对象存储；或 VolumeSnapshot（取决于 CSI 支持） |
+| Ingress 和 NodePort 怎么选？ | 单服务、内部调试用 NodePort；多域名/多路径、要统一入口和证书，用 Ingress |
+| 这个项目最难的地方？ | 探针误杀那一段——现象是「Pod 一直重启」，但根因是探针语义用错了，不是应用挂了 |
+
+---
+
+## 7. 学习资源（官方文档）
+
+| 主题 | 链接 |
+|---|---|
+| StatefulSet 概念与行为 | https://kubernetes.io/zh-cn/docs/concepts/workloads/controllers/statefulset/ |
+| 配置存活/就绪/启动探针 | https://kubernetes.io/zh-cn/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/ |
+| 持久卷与 PVC | https://kubernetes.io/zh-cn/docs/concepts/storage/persistent-volumes/ |
+| Secret | https://kubernetes.io/zh-cn/docs/concepts/configuration/secret/ |
+| Ingress | https://kubernetes.io/zh-cn/docs/concepts/services-networking/ingress/ |
+| Deployment 滚动更新 | https://kubernetes.io/zh-cn/docs/concepts/workloads/controllers/deployment/#rolling-update-deployment |
+
+---
+
+## 附录 A：文件包清单与操作顺序
+
+```
+k8s/
+├── 00-namespace.yaml            # 阶段 2
+├── 01-configmap.yaml            # 阶段 3
+├── 02-secret.yaml               # 阶段 2
+├── 03-storageclass.yaml         # 阶段 2（集群已有默认 SC 可跳过）
+├── 04-mysql-statefulset.yaml    # 阶段 2（Headless Service + StatefulSet）
+├── 05-wordpress-deployment.yaml # 阶段 3（含探针、envFrom）
+├── 06-service.yaml              # 阶段 3
+└── 07-ingress.yaml              # 阶段 4
+```
+
+**操作顺序**：`00 → 02 → 03 → 04`（阶段 2）→ `01 → 05 → 06`（阶段 3）→ `07`（阶段 4）。
+**回退**：`kubectl delete -f k8s/ --ignore-not-found`；PVC 不会随 namespace 删除自动清理，需手动删 `pvc/data-mysql-0`。

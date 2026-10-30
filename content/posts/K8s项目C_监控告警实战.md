@@ -16,6 +16,33 @@ categories: [项目]
 
 ---
 
+> **📖 怎么用这份文档**
+>
+> - **前置依赖**：项目 A/B 已完成（`damo-app` 在跑、私有仓库可用）；有一个能收信的 QQ 邮箱（需 SMTP 授权码）
+> - **预计耗时**：4–6 小时
+> - **学习路径**：阶段 1 指标原理 → 阶段 2 镜像中转 → 阶段 3 node-exporter → 阶段 4 kube-state-metrics → 阶段 5 Prometheus → 阶段 6 Grafana → 阶段 7 告警链路 → 阶段 8 验证
+> - **验收标准**：Grafana 三个大盘有真实曲线；手动触发一次告警能在 1 分钟内收到邮件
+
+## 目录
+
+- [0. 项目概览](#0-项目概览)
+- [阶段 1：先懂再装——指标采集原理](#阶段-1先懂再装指标采集原理)
+- [阶段 2：镜像中转（国内网络预案，5 分钟）](#阶段-2镜像中转国内网络预案5-分钟)
+- [阶段 3：node-exporter（节点指标，15 分钟）](#阶段-3node-exporter节点指标15-分钟)
+- [阶段 4：kube-state-metrics（K8s 对象指标，15 分钟）](#阶段-4kube-state-metricsk8s-对象指标15-分钟)
+- [阶段 5：Prometheus（核心，60 分钟）](#阶段-5prometheus核心60-分钟)
+- [阶段 6：Grafana 可视化（40 分钟）](#阶段-6grafana-可视化40-分钟)
+- [阶段 7：告警链路（Alertmanager + 邮件，60 分钟）](#阶段-7告警链路alertmanager--邮件60-分钟)
+- [阶段 8：全链路验证与面试演示](#阶段-8全链路验证与面试演示)
+- [9. 故障速查表](#9-故障速查表)
+- [10. 自测题](#10-自测题)
+- [11. 面试要点与简历写法](#11-面试要点与简历写法)
+- [12. 学习资源](#12-学习资源)
+- [附录 A：文件清单](#附录-a文件清单)
+- [附录 B：进阶路线——kube-prometheus-stack（生产主流）](#附录-b进阶路线kube-prometheus-stack生产主流)
+
+---
+
 ## 0. 项目概览
 
 ### 0.1 目标与产出
@@ -1785,7 +1812,7 @@ bash scripts/verify.sh
 | 5 | Grafana 仪表盘 | 1860 出图 / 自制面板出图 |
 | 6 | 告警状态机 | 能看到 inactive→pending→firing 流转 |
 | 7 | 邮件 | FIRING + RESOLVED 都收到过 |
-| 8 | CI/CD 仍然健康 | curl http://11.0.1.128:30090/ 正常（监控自己别把业务搞挂） |
+| 8 | CI/CD 仍然健康 | `curl http://11.0.1.129:30090/` 正常（监控自己别把业务搞挂）<br>⚠️ 2026-09-23 起：项目 F 设了 `externalTrafficPolicy: Local`，NodePort 只下发到**有 Pod 的节点**，**不能再打 master(11.0.1.128)**；推荐 `NODE=$(kubectl -n damo-app get pods -l app.kubernetes.io/name=damo-app -o jsonpath='{.items[0].status.hostIP}')` 后打 `$NODE:30090` |
 
 ### 8.3 60 秒面试演示脚本
 
@@ -1884,7 +1911,7 @@ curl http://11.0.1.128:30091/api/v1/query?query=up      # Prometheus 数据面
 
 ---
 
-## 10. 自测题（含答案）
+## 10. 自测题
 
 **Q1：Prometheus 为什么用 pull 而不是 push？**
 A1：① 拉取端（Prometheus）掌握采集节奏，目标故障时可发现"抓不到"（up=0 即告警）；push 模型目标"沉默"时难以区分"没数据"和"挂了"；② 简化目标侧配置（目标只需暴露 /metrics，不用知道监控中心在哪）；③ 配合服务发现天然适配动态环境。代价：短生命周期 Job 需 Pushgateway 补充。

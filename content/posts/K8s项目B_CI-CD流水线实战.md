@@ -9,6 +9,8 @@ categories: [项目]
 
 > 📦 **项目文件包**：[下载 K8s项目B_CI-CD流水线.zip](/files/K8s项目B_CI-CD流水线.zip)（含全部 YAML、damo-app 源码、Jenkinsfile、部署脚本，可直接拷到集群 master 使用）。本文件是详细操作手册，两者配合。
 
+> 📦 **项目文件包**：同目录下 `K8s项目B_CI-CD流水线/`（及 `.zip`）已把所有 YAML、damo-app 源码、Jenkinsfile、部署脚本落成真实文件，可直接拷到集群 master 使用。本文件是详细操作手册，两者配合。
+
 > **项目定位**：在自建三节点 K8s 集群（v1.35 / containerd / Ubuntu 24.04）上，部署 **Jenkins Master + 动态 Agent**，自建**私有镜像仓库 registry**，实现「**代码提交 → 自动构建镜像（Kaniko）→ 推送私有仓库 → 自动部署到 K8s → 访问验证**」全自动链路。
 >
 > **面试价值**：这是运维/DevOps 实习 JD 中出现频率最高的能力。做完这个项目，你能回答"CI/CD 全链路怎么落地""为什么用 Kaniko 不用 Docker-in-Docker""动态 Agent 和静态从节点区别""私有仓库怎么配"等高频面试题，且全部有动手实证。
@@ -27,6 +29,13 @@ categories: [项目]
 > | 节点 IP | 示例 `11.0.1.128`（master） | `kubectl get nodes -o wide` |
 
 ---
+
+> **📖 怎么用这份文档**
+>
+> - **前置依赖**：项目 A 已完成（集群可正常调度 Pod）；一个 GitHub 账号；节点能访问 GitHub（或配好 `http://11.0.1.1:7890` 代理）
+> - **预计耗时**：8–10 小时（首次拉镜像和装插件最费时）
+> - **学习路径**：阶段 1 源码与仓库 → 阶段 2 私有 registry → 阶段 3 部署 Jenkins → 阶段 4 Cloud 与动态 Agent → 阶段 5 写 Jenkinsfile → 阶段 6 全链路跑通
+> - **验收标准**：一次 `git push` 后 Jenkins 自动构建、镜像推进 `11.0.1.128:30000`、`damo-app` 页面显示新的构建号
 
 ## 目录
 
@@ -1252,6 +1261,7 @@ curl http://11.0.1.128:30090/
 | Agent Pod 起来又一直 Waiting / 连不上 | Jenkins URL 配错，Agent 回连失败 | 确认 Cloud 的 Jenkins URL 是 `http://jenkins.jenkins.svc.cluster.local:8080`；`kubectl logs -n jenkins <agent> -c jnlp` 看报错 |
 | jnlp 容器日志 `Connection refused` | 50000 端口没暴露或防火墙 | 确认 Service 有 jnlp 端口 50000；集群内走 DNS 通常不需要 NodePort |
 | 构建一直排队不执行 | 没有匹配 label 的 Agent / 资源不足 | Job 的 agent label 必须和 PodTemplate Labels 一致（`ci-agent`）；看队列：Jenkins → 构建队列 |
+| **★ 构建一开头就 FAILURE：`fatal: unable to access 'https://github.com/...': Failed to connect to 11.0.1.1 port 7890 after 2 ms: Could not connect to server`（git fetch 就挂了，连 Stage 1 都没进）** | ★ **宿主机代理（Clash 等）没开 / 关了「允许局域网连接」/ 换了端口** —— Jenkins 控制器的 Deployment 里写死了 `HTTP_PROXY=HTTPS_PROXY=http://11.0.1.1:7890`，宿主机代理一停，Pod 内每次 git 调用都被 RST。**报错发生在 `CpsScmFlowDefinition` 阶段 = 控制器读 Jenkinsfile 时的 fetch，不是 Agent 侧** | ① Windows 宿主机启动代理、勾「允许局域网连接」、确认端口 7890；② master 上验证：`nc -zv -w 3 11.0.1.1 7890`（通）＋ `curl -x http://11.0.1.1:7890 -sI https://github.com`（200）；③ **不需要重启 Jenkins**——env 是容器级变量，git 每次调用现读；④ 若代理换了端口，同步改 `manifests/jenkins.yaml` 的 4 个 proxy env 并 `kubectl apply`；⑤ 新增代理后要等下一次 Poll SCM 才能自动恢复 |
 
 ### 7.2 构建阶段
 
@@ -1296,6 +1306,60 @@ curl http://11.0.1.128:30090/
 - Agent 类问题两大金标准：`kubectl get events -n jenkins --sort-by=.lastTimestamp`（K8s 侧）+ Jenkins 日志 grep `JNLP4-connect`/`provisioning`（Jenkins 侧）。
 - Pod 反复重建 ≠ 容器重启（RESTARTS=0 时是 Pod 被插件杀掉重建），先分清再排障。
 - 一次只改一个变量，改完立即验证；连续 UI 改动后 Cloud 状态可疑就重启。
+
+### 7.5 实战排障实录（2026-09-15，宿主机代理单点）
+
+> 场景：改完仓库内容、点「立即构建」，**构建秒挂**，日志只有一段 git 异常。适合作为「一次与代码无关的 CI 故障」案例讲。
+
+**现象**
+
+```
+Started by user gjadmin
+hudson.plugins.git.GitException: Command "git fetch --tags --force --progress --prune -- origin +refs/heads/main:refs/remotes/origin/main" returned status code 128:
+stderr: fatal: unable to access 'https://github.com/GXEL-xy/damo-app.git/':
+        Failed to connect to 11.0.1.1 port 7890 after 2 ms: Could not connect to server
+  at ... CpsScmFlowDefinition.create(CpsScmFlowDefinition.java:123)
+Finished: FAILURE
+```
+
+**分层定位（三层全在日志的堆栈里，不用猜）**
+
+| 线索 | 说明 |
+|---|---|
+| `Failed to connect to 11.0.1.1 port 7890` | **目标不是 github.com，而是代理**。说明 git 被配了 proxy，且**连代理都连不上** = 代理进程不在 |
+| `after 2 ms` | 2 毫秒 = 本网段内被 TCP RST（对端可达但端口无监听），**不是超时** → 排除"网慢"，锁定"服务没起" |
+| `CpsScmFlowDefinition.create` | 出错在**控制器解析 Jenkinsfile 的 git fetch**，还没轮到 Agent Pod → **不是 Agent / Kaniko / Registry 的问题** |
+| `Started by user gjadmin` | 手动触发也走同一条 Git 路径，所以 Poll SCM 此时同样失效（等再久也不会自动触发） |
+
+**根因**
+
+`manifests/jenkins.yaml` 在控制器 Pod 上写死了代理环境变量：
+
+```yaml
+- name: HTTP_PROXY
+  value: "http://11.0.1.1:7890"     # ← 宿主机（VM 网关）上的 Clash 代理
+```
+
+`11.0.1.1` 是 VM 看到的宿主机地址，`7890` 是 Clash 的典型混合端口。集群是内网环境，出外网（GitHub / Docker Hub / gcr.io）历来靠这个代理——**它是整条 CI 链路的隐性单点**。宿主机代理一停（重启机器、手动退出、关了「允许局域网连接」、或换了端口），控制器内所有 git 操作立刻失败。
+
+**修复与验证**
+
+```bash
+# 1) 在 Windows 宿主机：启动代理 + 打开「允许局域网连接」+ 确认端口 7890
+# 2) master 上验证「VM → 宿主机代理」这一段（先测端口，再测协议）
+nc -zv -w 3 11.0.1.1 7890                                   # 期望 succeeded
+curl -x http://11.0.1.1:7890 -s -o /dev/null -w '%{http_code}\n' https://github.com   # 期望 200
+# 3) Pod 内验证「代理 env 生效」
+kubectl -n jenkins exec deploy/jenkins -- env | grep -i proxy
+kubectl -n jenkins exec deploy/jenkins -- git ls-remote https://github.com/GXEL-xy/damo-app.git
+# 4) 回 Jenkins 重试构建（无需重启 Pod：env 是容器级变量，git 每次调现读）
+```
+
+**方法论沉淀**
+
+- **看堆栈落在哪个类里，比看报错文本更早定性**：`CpsScmFlowDefinition` = 控制器侧拉 Jenkinsfile；`CliGitAPIImpl` 出现在 Agent 里才是 Agent 侧问题。
+- **`Connection refused` 的目标地址常常不是你真想访问的主机**——本次目标是代理。看到"连接失败"第一件事是问：**这个 IP:PORT 是谁？**
+- **代理是隐性的单点依赖**，且它不在集群内、不受 K8s 管理、没有任何健康检查。真正可靠的内网 CI 应当把"出网依赖"收敛成集群内资源（如自建 Gitea 作为 Git 源），代理只保留给镜像中转。这条取舍是很好的架构讨论素材。
 
 ---
 
