@@ -7,6 +7,8 @@ tags: ["k8s基础项目"]
 categories: [项目]
 ---
 
+> 📦 **项目文件包**：[下载 K8s项目A_应用容器化部署.zip](/files/K8s项目A_应用容器化部署.zip)（含 Namespace / Secret / StorageClass / MySQL StatefulSet / ConfigMap / Deployment / Service / Ingress 八份清单，可直接 apply）。本文件是详细操作手册，两者配合。
+
 > **目标**：在三节点集群上完成「Dockerfile → 镜像构建推送 → 配置管理 → 有状态应用(MySQL) → 无状态应用(WordPress) → 网络暴露(Ingress) → 验证排障」完整链路。
 > **组织方式**：按实施顺序分 **4 个阶段**，每个阶段 = 干什么 / 为什么 / 怎么做 / 怎么验证。
 > **选型理由**：WordPress + MySQL 是覆盖 K8s 知识点最全的组合——MySQL 用 StatefulSet/PV/PVC（有状态 + 存储），WordPress 用 Deployment/ConfigMap/Secret/Ingress（无状态 + 配置 + 网络）。
